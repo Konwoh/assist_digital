@@ -28,6 +28,18 @@ class CharacterGender(Enum):
     GENDERLESS = "Genderless"
     
 class Entity(ABC):
+    def _stringify_value(self, value):
+        if isinstance(value, Enum):
+            return value.value
+        if isinstance(value, list):
+            return ", ".join(self._stringify_value(item) for item in value)
+        if isinstance(value, dict):
+            return ", ".join(
+                f"{key}: {self._stringify_value(item)}"
+                for key, item in value.items()
+            )
+        return str(value)
+    
     def __repr__(self) -> str:
         fields = []
         for name, value in vars(self).items():
@@ -35,6 +47,12 @@ class Entity(ABC):
                 value = value.value
             fields.append(f"{name}={value!r}")
         return f"{self.__class__.__name__}({', '.join(fields)})"
+
+    def __str__(self) -> str:
+        fields = []
+        for name, value in vars(self).items():
+            fields.append(f"{name}: {self._stringify_value(value)}")
+        return f"{self.__class__.__name__}: {'; '.join(fields)}"
 
 class Character(Entity):
     def __init__(self, id: int, name: str, status: str, species: str, type: str, gender: str, origin: Dict, location: Dict, image: str, episode: List[str], url: str, created: str):
