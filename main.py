@@ -12,8 +12,10 @@ load_dotenv()
 PROMPT_DIR = Path(__file__).parent / "system_prompts"
 RAG_AGENT_PROMPT_PATH = PROMPT_DIR / "rag_agent_prompt.md"
 REWRITE_AGENT_PROMPT_PATH = PROMPT_DIR / "rewrite_agent_prompt.md"
+CONFIDENCE_AGENT_PROMPT_PATH = PROMPT_DIR / "confidence_agent_prompt.md"
 RAG_AGENT_PROMPT = RAG_AGENT_PROMPT_PATH.read_text(encoding="utf-8")
 REWRITE_AGENT_PROMPT = REWRITE_AGENT_PROMPT_PATH.read_text(encoding="utf-8")
+CONFIDENCE_AGENT_PROMPT = CONFIDENCE_AGENT_PROMPT_PATH.read_text(encoding="utf-8")
 
 
 chroma_client = ChromaDB(model="mixedbread-ai/mxbai-embed-large-v1", collection="rick_and_morty")
@@ -34,6 +36,24 @@ class RewrittenQuery(BaseModel):
     )
 
 
+class ConfidenceEvaluation(BaseModel):
+    score: float = Field(
+        ge=0.0,
+        le=1.0,
+        description="Konfidenzscore zwischen 0.0 und 1.0",
+    )
+    label: Literal["hoch", "mittel", "niedrig"] = Field(
+        description="Kurze verbale Bewertung des Scores",
+    )
+    explanation: str = Field(
+        description="Kurze Begründung, warum dieser Score vergeben wurde",
+    )
+    missing_evidence: list[str] = Field(
+        default_factory=list,
+        description="Wichtige Aussagen, die nicht ausreichend belegt sind",
+    )
+
+
 query_rewriter = Agent(
     model=model,
     output_type=RewrittenQuery,
@@ -44,6 +64,13 @@ query_rewriter = Agent(
 rag_agent = Agent(
     model=model,
     system_prompt=RAG_AGENT_PROMPT,
+)
+
+confidence_agent = Agent(
+    model=model,
+    output_type=ConfidenceEvaluation,
+    model_settings=ModelSettings(temperature=0.0),
+    system_prompt=CONFIDENCE_AGENT_PROMPT,
 )
 
 @rag_agent.tool_plain
@@ -128,8 +155,37 @@ def answer_question(user_query: str) -> str:
         prompt,
     )
 
-    return result.output
+    confidence_prompt = f"""
+    original user prompt: {user_query}
+
+    improved user prompt: {improved_query}
+
+    entity focus: {rewrite_result.output.entity_focus}
+
+    rag answer:
+    {result.output}
+
+    rag messages and retrieved context:
+    {result.all_messages()}
+    """
+
+    confidence_result = confidence_agent.run_sync(
+        confidence_prompt,
+        usage_limits=UsageLimits(request_limit=1),
+    )
+    confidence = confidence_result.output
+
+    response = (
+        f"{result.output}\n\n"
+        f"Konfidenz: {confidence.score:.2f} ({confidence.label})\n"
+        f"Begründung: {confidence.explanation}"
+    )
+
+    if confidence.missing_evidence:
+        response += "\nNicht ausreichend belegt: " + "; ".join(confidence.missing_evidence)
+
+    return response
 
 if __name__ == '__main__':
-    response = answer_question("Wann wurde die erste Folge ausgestrahlt?")
+    response = answer_question("Wie ist der Name der letzen Folge von Rick and Morty?")
     print(response)
