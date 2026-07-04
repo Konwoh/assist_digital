@@ -1,4 +1,4 @@
-from entities import Character, Entity, Episode, Location
+from models.entities import Character, Entity, Episode, Location
 
 class EntityFactory:
     @staticmethod

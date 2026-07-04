@@ -2,7 +2,7 @@ from chromadb import PersistentClient
 import hashlib
 from fastembed import TextEmbedding
 from typing import List, Optional
-from entities import Entity
+from models.entities import Entity
 
 class ChromaDB:
     def __init__(self, model, collection):

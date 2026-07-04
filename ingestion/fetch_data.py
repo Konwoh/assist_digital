@@ -1,7 +1,7 @@
 import requests
 from logger import logger 
-from entities import Entity, Character, Episode, Location
-from factory import EntityFactory
+from models.entities import Entity, Character, Episode, Location
+from models.factory import EntityFactory
 from typing import List, Optional
 import time
 
