@@ -28,6 +28,9 @@ class CharacterGender(Enum):
     GENDERLESS = "Genderless"
     
 class Entity(ABC):
+    id: int
+    name: str
+    url: str
     def _stringify_value(self, value):
         if isinstance(value, Enum):
             return value.value
