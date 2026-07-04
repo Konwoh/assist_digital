@@ -36,14 +36,14 @@ class DataFetcher:
             logger.error("Error: %s", e)
             raise  
     
-    def fetch_single(self, id: int) -> Entity:
+    def fetch_info(self) -> str:
         try:
-            url = self._build_url(id=id)
+            url = self._build_url()
             response = requests.get(url)
             response.raise_for_status()
             data = response.json()
-            entity = EntityFactory.create_entity(self.entity, data)
-            return entity
+            info = data["info"]
+            return info
         
         except requests.exceptions.HTTPError as e:
             logger.error("HTTP error occurred: %s", e)
@@ -106,4 +106,9 @@ class DataMatcher:
                 entity.characters = [
                     entity_by_url[character_url].name
                     for character_url in entity.characters
-                ] 
+                ]
+            elif isinstance(entity, Location):
+                entity.residents = [
+                    entity_by_url[character_url].name
+                    for character_url in entity.residents
+                ]

@@ -1,40 +1,27 @@
 from fetch_data import DataFetcher, DataMatcher
 from database import ChromaDB
 
-chroma_client = ChromaDB(model="Qwen/Qwen3-Embedding-0.6B", collection="rick_and_morty")
+chroma_client = ChromaDB(model="mixedbread-ai/mxbai-embed-large-v1", collection="rick_and_morty")
 
 character_fetcher = DataFetcher("character")
 episode_fetcher = DataFetcher("episode")
+location_fetcher = DataFetcher("location")
 
 characters = character_fetcher.fetch_pages()
+characters_info = character_fetcher.fetch_info()
 episodes = episode_fetcher.fetch_pages()
+episodes_info = episode_fetcher.fetch_info()
+locations = location_fetcher.fetch_pages()
+locations_info = location_fetcher.fetch_info()
 
 DataMatcher(episodes, characters).matching()
 DataMatcher(characters, episodes).matching()
+DataMatcher(characters, locations).matching()
 
 
-for char in characters:
-    print(char)
-    vector = chroma_client.text_to_vector(char)
-    chroma_client.collection.upsert(
-        ids=[f"character:{char.id}"],
-        embeddings=[vector],
-        documents=[str(char)],
-        metadatas=[{
-            "type": "character",
-            "name": char.name,
-        }],
-    )
-    
-for episode in episodes:
-    vector = chroma_client.text_to_vector(episode)
-    chroma_client.collection.upsert(
-        ids=[f"episode:{episode.id}"],
-        embeddings=[vector],
-        documents=[str(episode)],
-        metadatas=[{
-            "type": "episode",
-            "name": episode.name,
-        }],
-    )
-
+chroma_client.upload_entity_list(characters, entity_group="characters")
+chroma_client.upload_entity_list(episodes, entity_group="episodes")
+chroma_client.upload_entity_list(locations, entity_group="locations")
+chroma_client.upload_info(characters_info, "characters")
+chroma_client.upload_info(episodes_info, "episodes")
+chroma_client.upload_info(locations_info, "locations")
