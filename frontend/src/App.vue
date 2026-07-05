@@ -22,8 +22,18 @@ async function sendMessage() {
       body: JSON.stringify({ message: text }),
     })
 
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
     const data = await response.json()
-    messages.value.push({ role: "assistant", content: data.answer })
+    messages.value.push({
+      role: "assistant",
+      content: data.answer,
+      sources: data.sources,
+      confidenceScore: data.confidence_score,
+      confidenceLabel: data.confidence_label,
+    })
   } catch (error) {
     messages.value.push({
       role: "assistant",
@@ -46,7 +56,19 @@ async function sendMessage() {
           :key="index"
           :class="['message', message.role]"
         >
-          {{ message.content }}
+          <p class="message-text">{{ message.content }}</p>
+          <div v-if="message.sources" class="sources">
+            <span class="sources-label">Quellen</span>
+            <p>{{ message.sources }}</p>
+          </div>
+          <div
+            v-if="message.confidenceScore !== undefined"
+            class="message-confidence"
+          >
+            <span>Konfidenz</span>
+            <strong>{{ message.confidenceScore.toFixed(2) }}</strong>
+            <em>{{ message.confidenceLabel }}</em>
+          </div>
         </div>
 
         <div v-if="loading" class="message assistant">
@@ -112,6 +134,50 @@ async function sendMessage() {
 .message.assistant {
   align-self: flex-start;
   background: #26313b;
+}
+
+.message-text {
+  margin: 0;
+}
+
+.sources {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #3a4652;
+  color: #c9d1d9;
+  font-size: 0.9rem;
+}
+
+.sources p {
+  margin: 4px 0 0;
+}
+
+.sources-label {
+  color: #7ee787;
+  font-weight: 700;
+}
+
+.message-confidence {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #3a4652;
+  font-size: 0.9rem;
+}
+
+.message-confidence span {
+  color: #c9d1d9;
+}
+
+.message-confidence strong {
+  color: #7ee787;
+}
+
+.message-confidence em {
+  color: #8b949e;
+  font-style: normal;
 }
 
 .input-row {
