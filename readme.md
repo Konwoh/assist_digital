@@ -64,8 +64,8 @@ Die eigentliche Anfrage läuft mehrstufig:
 
 Im Projektroot wird eine `.env` erwartet:
 
-AZURE_ENDPOINT=https://<dein-resource>.openai.azure.com/openai/v1
-AZURE_API=<api-key>
+AZURE_ENDPOINT=azure_endpoint_url
+AZURE_API=api-key
 
 ### 2. Docker Setup
 Das Docker Setup besteht aus drei Service:
