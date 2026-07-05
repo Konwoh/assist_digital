@@ -29,6 +29,7 @@ class AgentFactory:
                 "entity_group": entity_group,
                 "document": documents[0],
                 "metadata": metadatas[0] if metadatas else None,
+                "source": f"Rick and Morty API {entity_group} info"
             }
 
         @rag_agent.tool_plain

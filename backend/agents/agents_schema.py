@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 class RAGAnswer(BaseModel):
     response: str = Field(description="Normale Respone auf die Frage")
-    sources: str = Field(description="Quellenangabe, die zur Beantwortung der Frage benutzt wurden")
+    sources: str = Field(description="Pflichtfeld: Quellenangaben zu allen Informationen. Darf bei fachlichen Antworten nicht leer sein.")
 
 class RewrittenQuery(BaseModel):
     search_query: str = Field(description="Optimierte Query für die semantische Suche")
