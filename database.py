@@ -9,7 +9,6 @@ class ChromaDB:
             self.client = PersistentClient(path="chromadb/")
             self.model = TextEmbedding(model)
             self.collection = self.client.get_or_create_collection(name=collection)
-            #self.r_splitter = RecursiveCharacterTextSplitter(chunk_size=splitter_chunksize, chunk_overlap=150)
     
     def text_to_vector(self, text) -> list[float]:
         embedding = next(iter(self.model.embed([str(text)])))
