@@ -23,8 +23,15 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
+    sources: str
+    confidence_score: float
+    confidence_label: str
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     answer = answer_question(request.message)
-    return ChatResponse(answer=answer)
+    response = answer.rag_agent_response.response
+    sources = answer.rag_agent_response.sources
+    confidence_label = answer.confidence_agent_response.label
+    confidence_score = answer.confidence_agent_response.score
+    return ChatResponse(answer=response, sources=sources, confidence_score= confidence_score, confidence_label=confidence_label)

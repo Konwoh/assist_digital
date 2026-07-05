@@ -1,11 +1,12 @@
 from pydantic_ai import Agent, ModelSettings
-from .agents_schema import RewrittenQuery, ConfidenceEvaluation
+from .agents_schema import RewrittenQuery, ConfidenceEvaluation, RAGAnswer
 from typing import Literal
 
 class AgentFactory:
-    def create_rag_agent(self, model, chroma_client, prompt: str) -> Agent:
+    def create_rag_agent(self, model, chroma_client, prompt: str) -> Agent[object, RAGAnswer]:
         rag_agent = Agent(
             model=model,
+            output_type=RAGAnswer,
             system_prompt=prompt,
         )
 

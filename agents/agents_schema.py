@@ -1,13 +1,17 @@
 from typing import Literal
 from pydantic import BaseModel, Field
 
+
+class RAGAnswer(BaseModel):
+    response: str = Field(description="Normale Respone auf die Frage")
+    sources: str = Field(description="Quellenangabe, die zur Beantwortung der Frage benutzt wurden")
+
 class RewrittenQuery(BaseModel):
     search_query: str = Field(description="Optimierte Query für die semantische Suche")
     entity_focus: list[Literal["character", "episode", "location"]] = Field(
         default_factory=list,
         description="Welche Entitätstypen wahrscheinlich relevant sind",
     )
-
 
 class ConfidenceEvaluation(BaseModel):
     score: float = Field(

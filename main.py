@@ -1,4 +1,6 @@
 from pydantic_ai import UsageLimits
+from pydantic import BaseModel
+from agents.agents_schema import RAGAnswer, ConfidenceEvaluation
 from agents.agents_factory import AgentFactory
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.azure import AzureProvider
@@ -31,7 +33,11 @@ rag_agent = agent_factory.create_rag_agent(model, chroma_client, RAG_AGENT_PROMP
 rewrite_agent = agent_factory.create_rewrite_agent(model, REWRITE_AGENT_PROMPT)
 confidence_agent = agent_factory.create_confidence_agent(model, CONFIDENCE_AGENT_PROMPT)
 
-def answer_question(user_query: str) -> str:
+class ChatAnswer(BaseModel):
+    rag_agent_response: RAGAnswer
+    confidence_agent_response: ConfidenceEvaluation
+
+def answer_question(user_query: str) -> ChatAnswer:
     rewrite_result = rewrite_agent.run_sync(
         user_query,
         usage_limits=UsageLimits(request_limit=1),
@@ -51,6 +57,7 @@ def answer_question(user_query: str) -> str:
     result = rag_agent.run_sync(
         prompt,
     )
+    rag_answer = result.output
 
     confidence_prompt = f"""
     original user prompt: {user_query}
@@ -60,7 +67,10 @@ def answer_question(user_query: str) -> str:
     entity focus: {rewrite_result.output.entity_focus}
 
     rag answer:
-    {result.output}
+    {rag_answer.response}
+
+    rag sources:
+    {rag_answer.sources}
 
     rag messages and retrieved context:
     {result.all_messages()}
@@ -72,14 +82,7 @@ def answer_question(user_query: str) -> str:
     )
     confidence = confidence_result.output
 
-    response = (
-        f"{result.output}\n\n"
-        f"Konfidenz: {confidence.score:.2f} ({confidence.label})\n"
-        f"Begründung: {confidence.explanation}"
-    )
-
-    if confidence.missing_evidence:
-        response += "\nNicht ausreichend belegt: " + "; ".join(confidence.missing_evidence)
+    response = ChatAnswer(rag_agent_response=rag_answer, confidence_agent_response=confidence)
 
     return response
 
