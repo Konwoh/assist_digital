@@ -1,0 +1,12 @@
+.git
+.vscode
+.agents
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+logs/
+chromadb/
+frontend/node_modules/
+frontend/dist/
