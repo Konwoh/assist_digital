@@ -1,5 +1,5 @@
-from ingestion.fetch_data import DataFetcher, DataMatcher
-from database import ChromaDB
+from backend.ingestion.fetch_data import DataFetcher, DataMatcher
+from backend.database import ChromaDB
 
 def load_data():
     chroma_client = ChromaDB(model="mixedbread-ai/mxbai-embed-large-v1", collection="rick_and_morty")

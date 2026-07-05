@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from main import answer_question, add_feedback_to_history
+from backend.main import answer_question, add_feedback_to_history
 
 app = FastAPI()
 

@@ -10,7 +10,7 @@ services:
     volumes:
       - ./chromadb:/app/chromadb
       - ./logs:/app/logs
-    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn backend.api:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build:
@@ -33,4 +33,4 @@ services:
     volumes:
       - ./chromadb:/app/chromadb
       - ./logs:/app/logs
-    command: python -m ingestion.load_data
+    command: python -m backend.ingestion.load_data

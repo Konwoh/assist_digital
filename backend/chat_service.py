@@ -1,6 +1,6 @@
 from pydantic_ai import ModelMessage, UsageLimits, ModelRequest, UserPromptPart, Agent
 from pydantic import BaseModel
-from agents.agents_schema import RAGAnswer, ConfidenceEvaluation
+from backend.agents.agents_schema import RAGAnswer, ConfidenceEvaluation
 
 
 class ChatAnswer(BaseModel):

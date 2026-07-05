@@ -1,12 +1,22 @@
-from chromadb import PersistentClient
 import hashlib
-from fastembed import TextEmbedding
+import os
+from pathlib import Path
 from typing import List, Optional
-from models.entities import Entity
+
+from chromadb import PersistentClient
+from fastembed import TextEmbedding
+
+from backend.models.entities import Entity
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_CHROMA_PATH = PROJECT_ROOT / "chromadb"
+
 
 class ChromaDB:
     def __init__(self, model, collection):
-            self.client = PersistentClient(path="chromadb/")
+            chroma_path = Path(os.getenv("CHROMA_PATH", DEFAULT_CHROMA_PATH))
+            self.client = PersistentClient(path=str(chroma_path))
             self.model = TextEmbedding(model)
             self.collection = self.client.get_or_create_collection(name=collection)
     
