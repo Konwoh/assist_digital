@@ -15,6 +15,22 @@ class ChatService:
         self.max_history_messages = max_history_messages
         self.conversation_history: list[ModelMessage] = []    
         
+    def _is_tool_response_message(self, message: ModelMessage) -> bool:
+        parts = getattr(message, "parts", [])
+        tool_response_parts = {"ToolReturnPart", "RetryPromptPart"}
+        return bool(parts) and all(
+            part.__class__.__name__ in tool_response_parts
+            for part in parts
+        )
+
+    def _trim_conversation_history(self, messages: list[ModelMessage]) -> list[ModelMessage]:
+        trimmed_messages = messages[-self.max_history_messages:]
+
+        while trimmed_messages and self._is_tool_response_message(trimmed_messages[0]):
+            trimmed_messages = trimmed_messages[1:]
+
+        return trimmed_messages
+        
     
     def _evaluate_confidence(
         self,
@@ -67,7 +83,7 @@ class ChatService:
                 },
             )
         )
-        self.conversation_history = self.conversation_history[-self.max_history_messages:]
+        self.conversation_history = self._trim_conversation_history(self.conversation_history)
     
     def answer_question(self, user_query: str) -> ChatAnswer:
         rewrite_result = self.rewrite_agent.run_sync(
@@ -140,7 +156,7 @@ class ChatService:
                 rag_messages=result.all_messages(),
             )
 
-        self.conversation_history = result.all_messages()[-self.max_history_messages:]
+        self.conversation_history = self._trim_conversation_history(result.all_messages())
         response = ChatAnswer(rag_agent_response=rag_answer, confidence_agent_response=confidence)
 
         return response
