@@ -5,6 +5,33 @@ const messages = ref([])
 const input = ref("")
 const loading = ref(false)
 
+async function sendFeedback(message, feedback) {
+  if (message.feedbackSending) return
+
+  message.feedbackSending = true
+  message.feedbackError = false
+
+  try {
+    const response = await fetch("http://localhost:8000/feedback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ feedback }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+
+    message.feedback = feedback
+  } catch (error) {
+    message.feedbackError = true
+  } finally {
+    message.feedbackSending = false
+  }
+}
+
 async function sendMessage() {
   const text = input.value.trim()
   if (!text || loading.value) return
@@ -33,6 +60,9 @@ async function sendMessage() {
       sources: data.sources,
       confidenceScore: data.confidence_score,
       confidenceLabel: data.confidence_label,
+      feedback: null,
+      feedbackSending: false,
+      feedbackError: false,
     })
   } catch (error) {
     messages.value.push({
@@ -69,6 +99,36 @@ async function sendMessage() {
             <strong>{{ message.confidenceScore.toFixed(2) }}</strong>
             <em>{{ message.confidenceLabel }}</em>
           </div>
+          <div
+            v-if="message.role === 'assistant' && message.confidenceScore !== undefined"
+            class="feedback-row"
+          >
+            <button
+              type="button"
+              class="feedback-button"
+              :class="{ active: message.feedback === true }"
+              :disabled="message.feedbackSending"
+              title="Daumen hoch"
+              aria-label="Daumen hoch"
+              @click="sendFeedback(message, true)"
+            >
+              <span class="feedback-icon" aria-hidden="true">👍</span>
+            </button>
+            <button
+              type="button"
+              class="feedback-button"
+              :class="{ active: message.feedback === false }"
+              :disabled="message.feedbackSending"
+              title="Daumen runter"
+              aria-label="Daumen runter"
+              @click="sendFeedback(message, false)"
+            >
+              <span class="feedback-icon" aria-hidden="true">👎</span>
+            </button>
+            <span v-if="message.feedbackError" class="feedback-error">
+              Feedback fehlgeschlagen
+            </span>
+          </div>
         </div>
 
         <div v-if="loading" class="message assistant">
@@ -81,7 +141,7 @@ async function sendMessage() {
           v-model="input"
           placeholder="Frage zu Rick and Morty stellen..."
         />
-        <button type="submit" :disabled="loading">
+        <button class="send-button" type="submit" :disabled="loading">
           Senden
         </button>
       </form>
@@ -180,6 +240,53 @@ async function sendMessage() {
   font-style: normal;
 }
 
+.feedback-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #3a4652;
+}
+
+.feedback-button {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid #3a4652;
+  border-radius: 6px;
+  background: #1f2933;
+  color: white;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.feedback-icon {
+  display: block;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.feedback-button:hover:not(:disabled),
+.feedback-button.active {
+  border-color: #7ee787;
+  background: #24362d;
+}
+
+.feedback-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.feedback-error {
+  color: #ff7b72;
+  font-size: 0.85rem;
+}
+
 .input-row {
   display: flex;
   gap: 8px;
@@ -194,7 +301,7 @@ input {
   color: white;
 }
 
-button {
+.send-button {
   padding: 12px 18px;
   border-radius: 8px;
   border: none;

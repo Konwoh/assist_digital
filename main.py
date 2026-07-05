@@ -1,4 +1,4 @@
-from pydantic_ai import UsageLimits
+from pydantic_ai import ModelMessage, ModelRequest, UsageLimits, UserPromptPart
 from pydantic import BaseModel
 from agents.agents_schema import RAGAnswer, ConfidenceEvaluation
 from agents.agents_factory import AgentFactory
@@ -34,11 +34,34 @@ rewrite_agent = agent_factory.create_rewrite_agent(model, REWRITE_AGENT_PROMPT)
 confidence_agent = agent_factory.create_confidence_agent(model, CONFIDENCE_AGENT_PROMPT)
 
 MAX_HISTORY_MESSAGES = 20
-conversation_history = []
+conversation_history: list[ModelMessage] = []
 
 class ChatAnswer(BaseModel):
     rag_agent_response: RAGAnswer
     confidence_agent_response: ConfidenceEvaluation
+
+def add_feedback_to_history(feedback: bool) -> None:
+    global conversation_history
+
+    feedback_text = (
+        "Feedback zum vorherigen Assistant-Output: Der User hat die letzte Antwort mit Daumen hoch bewertet. "
+        "Behalte den Antwortstil und die Herangehensweise bei, falls es zur naechsten Frage passt."
+        if feedback
+        else
+        "Feedback zum vorherigen Assistant-Output: Der User hat die letzte Antwort mit Daumen runter bewertet. "
+        "Passe die naechste Antwort entsprechend an: pruefe die Quellen genauer, antworte praeziser und vermeide denselben Fehler."
+    )
+
+    conversation_history.append(
+        ModelRequest(
+            parts=[UserPromptPart(content=feedback_text)],
+            metadata={
+                "type": "feedback",
+                "rating": "good" if feedback else "bad",
+            },
+        )
+    )
+    conversation_history = conversation_history[-MAX_HISTORY_MESSAGES:]
 
 def answer_question(user_query: str) -> ChatAnswer:
     global conversation_history

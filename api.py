@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from main import answer_question
+from main import add_feedback_to_history, answer_question
 
 app = FastAPI()
 
@@ -27,6 +27,12 @@ class ChatResponse(BaseModel):
     confidence_score: float
     confidence_label: str
 
+class FeedbackRequest(BaseModel):
+    feedback: bool
+
+class FeedbackResponse(BaseModel):
+    accepted: bool
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
     answer = answer_question(request.message)
@@ -34,4 +40,9 @@ def chat(request: ChatRequest):
     sources = answer.rag_agent_response.sources
     confidence_label = answer.confidence_agent_response.label
     confidence_score = answer.confidence_agent_response.score
-    return ChatResponse(answer=response, sources=sources, confidence_score= confidence_score, confidence_label=confidence_label)
+    return ChatResponse(answer=response, sources=sources, confidence_score=confidence_score, confidence_label=confidence_label)
+
+@app.post("/feedback", response_model=FeedbackResponse)
+def feedback(request: FeedbackRequest):
+    add_feedback_to_history(request.feedback)
+    return FeedbackResponse(accepted=True)
