@@ -33,11 +33,16 @@ rag_agent = agent_factory.create_rag_agent(model, chroma_client, RAG_AGENT_PROMP
 rewrite_agent = agent_factory.create_rewrite_agent(model, REWRITE_AGENT_PROMPT)
 confidence_agent = agent_factory.create_confidence_agent(model, CONFIDENCE_AGENT_PROMPT)
 
+MAX_HISTORY_MESSAGES = 20
+conversation_history = []
+
 class ChatAnswer(BaseModel):
     rag_agent_response: RAGAnswer
     confidence_agent_response: ConfidenceEvaluation
 
 def answer_question(user_query: str) -> ChatAnswer:
+    global conversation_history
+
     rewrite_result = rewrite_agent.run_sync(
         user_query,
         usage_limits=UsageLimits(request_limit=1),
@@ -56,7 +61,9 @@ def answer_question(user_query: str) -> ChatAnswer:
     
     result = rag_agent.run_sync(
         prompt,
+        message_history=conversation_history,
     )
+    conversation_history = result.all_messages()[-MAX_HISTORY_MESSAGES:]
     rag_answer = result.output
 
     confidence_prompt = f"""
