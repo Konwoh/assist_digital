@@ -1,6 +1,4 @@
-from pydantic_ai import ModelMessage, ModelRequest, UsageLimits, UserPromptPart
-from pydantic import BaseModel
-from agents.agents_schema import RAGAnswer, ConfidenceEvaluation
+from chat_service import ChatService
 from agents.agents_factory import AgentFactory
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.azure import AzureProvider
@@ -25,97 +23,26 @@ model = OpenAIChatModel(
         api_key=os.getenv("AZURE_API"),
     ),
 )
+def create_chat_service() -> ChatService:
+    chroma_client = ChromaDB(model="mixedbread-ai/mxbai-embed-large-v1", collection="rick_and_morty")
 
-chroma_client = ChromaDB(model="mixedbread-ai/mxbai-embed-large-v1", collection="rick_and_morty")
+    agent_factory = AgentFactory()
+    rag_agent = agent_factory.create_rag_agent(model, chroma_client, RAG_AGENT_PROMPT)
+    rewrite_agent = agent_factory.create_rewrite_agent(model, REWRITE_AGENT_PROMPT)
+    confidence_agent = agent_factory.create_confidence_agent(model, CONFIDENCE_AGENT_PROMPT)
 
-agent_factory = AgentFactory()
-rag_agent = agent_factory.create_rag_agent(model, chroma_client, RAG_AGENT_PROMPT)
-rewrite_agent = agent_factory.create_rewrite_agent(model, REWRITE_AGENT_PROMPT)
-confidence_agent = agent_factory.create_confidence_agent(model, CONFIDENCE_AGENT_PROMPT)
+    return ChatService(rag_agent, rewrite_agent, confidence_agent)
 
-MAX_HISTORY_MESSAGES = 20
-conversation_history: list[ModelMessage] = []
 
-class ChatAnswer(BaseModel):
-    rag_agent_response: RAGAnswer
-    confidence_agent_response: ConfidenceEvaluation
+chat_service = create_chat_service()
+
+
+def answer_question(query: str):
+    return chat_service.answer_question(query)
+
 
 def add_feedback_to_history(feedback: bool) -> None:
-    global conversation_history
-
-    feedback_text = (
-        "Feedback zum vorherigen Assistant-Output: Der User hat die letzte Antwort mit Daumen hoch bewertet. "
-        "Behalte den Antwortstil und die Herangehensweise bei, falls es zur naechsten Frage passt."
-        if feedback
-        else
-        "Feedback zum vorherigen Assistant-Output: Der User hat die letzte Antwort mit Daumen runter bewertet. "
-        "Passe die naechste Antwort entsprechend an: pruefe die Quellen genauer, antworte praeziser und vermeide denselben Fehler."
-    )
-
-    conversation_history.append(
-        ModelRequest(
-            parts=[UserPromptPart(content=feedback_text)],
-            metadata={
-                "type": "feedback",
-                "rating": "good" if feedback else "bad",
-            },
-        )
-    )
-    conversation_history = conversation_history[-MAX_HISTORY_MESSAGES:]
-
-def answer_question(user_query: str) -> ChatAnswer:
-    global conversation_history
-
-    rewrite_result = rewrite_agent.run_sync(
-        user_query,
-        usage_limits=UsageLimits(request_limit=1),
-    )
-
-    improved_query = rewrite_result.output.search_query
-
-    prompt = f"""
-    original user prompt: {user_query}
+    chat_service.add_feedback_to_history(feedback)
     
-    improved user prompt: {improved_query}
-    
-    entity focus: {rewrite_result.output.entity_focus}
-    """
-    
-    
-    result = rag_agent.run_sync(
-        prompt,
-        message_history=conversation_history,
-    )
-    conversation_history = result.all_messages()[-MAX_HISTORY_MESSAGES:]
-    rag_answer = result.output
-
-    confidence_prompt = f"""
-    original user prompt: {user_query}
-
-    improved user prompt: {improved_query}
-
-    entity focus: {rewrite_result.output.entity_focus}
-
-    rag answer:
-    {rag_answer.response}
-
-    rag sources:
-    {rag_answer.sources}
-
-    rag messages and retrieved context:
-    {result.all_messages()}
-    """
-
-    confidence_result = confidence_agent.run_sync(
-        confidence_prompt,
-        usage_limits=UsageLimits(request_limit=3),
-    )
-    confidence = confidence_result.output
-
-    response = ChatAnswer(rag_agent_response=rag_answer, confidence_agent_response=confidence)
-
-    return response
-
 if __name__ == '__main__':
-    response = answer_question("Auf welchen Planeten im Rick and Morty Universum leben die meisten Einwohner?")
-    print(response)
+    print(answer_question("Auf welchen Planeten im Rick and Morty Universum leben die meisten Einwohner?"))
